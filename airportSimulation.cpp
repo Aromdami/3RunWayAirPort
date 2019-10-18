@@ -60,7 +60,7 @@ void takeoffEnqueue(randomInput& planes, Queue<TakeoffPlane>* landingQ);
 int findSmallLandingQueue(Queue<LandingPlane>* landingQueue);
 int findSmallTakeoffQueue(Queue<TakeoffPlane>* takeoffQueue);
 
-int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime);
+int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime, randomInput& planes);
 int takeOffProcedure(Queue<TakeoffPlane>* takeOff, int pivot, int currentTime);
 
 
@@ -69,72 +69,26 @@ bool isAllEmpty(Queue<TakeoffPlane>* takeoffQ);
 void showQueueStatus(Queue<LandingPlane>* landingQueue);
 void showQueueStatus(Queue<TakeoffPlane>* takeoffQueue);
 void recordOfRunways();
-void recordOfRunways(int currentTime);
+void recordOfRunways(int currentTime, Queue<LandingPlane>* landingQ, Queue<TakeoffPlane>* takeoffQ);
 
 /*Global Variables (Planes, index of Runways)*/
 LandingPlane* LPs;
 TakeoffPlane* TPs;
 static int index1 = -1, index2 = -1, index3 = -1, crash = 0;
 static int R1End = 0, R2End = 0, R3End = 0;
-static int lnd = 0, toff = 0, landcomplete = 0, flightcomplete = 0;
+static int lnd = 0, toff = 0, landcomplete = 0, flightcomplete = 0, nofuel = 0;
+static double landed = 0, tookoff = 0, remTime = 0;
+
 struct UseRunway R1[100], R2[100], R3[100];
 int main()
 {
 	struct randomInput planes;
 	Queue<LandingPlane> landingQ[4];
-	Queue<TakeoffPlane> takeoffQ[3]	;
+	Queue<TakeoffPlane> takeoffQ[3];
 	int nop = generateInputData(&planes);
+	int nol = nop - planes.numPlanesTakeOff;
 	int currentTime = planes.timeUnit;
-	
-	
-	/*Debugging : Generate Input Data*/
-	/*
-	{
-		cout << "===================================================" << endl;
-		cout << "          Test of Generate Input Data" << endl;
-		cout << "===================================================" << endl;
-		cout << "TimeUnit : " << setw(4) << setfill('0') << planes.timeUnit << endl
-			<< "Number of Planes Taking off : " << planes.numPlanesTakeOff << endl
-			<< "Number of Planes Landing    : " << planes.numPlanesLanding << endl
-			<< "Array of Remaining Times    : ";
-		for (int i = 0; i < planes.numPlanesLanding; i++)
-			cout << planes.remainingFlyTime[i] << " ";
-		cout << endl << endl;
-		cout << "[List of Taking off Planes]" << endl;
-		for (int i = 0; i < planes.numPlanesTakeOff; i++)
-			cout << "Plane ID           : " << TPs[i].IDofTakeoffPlane << endl
-			<< "TakeOff Time       : " << setw(4) << setfill('0') << TPs[i].takeoffTime << endl << endl;
-		cout << "------------------------" << endl;
-		cout << "[List of Landing Planes]" << endl;
-		for (int i = 0; i < planes.numPlanesLanding; i++)
-			cout << "Plane ID           : " << LPs[i].IDofLandingPlane << endl
-			<< "Arrival Time       : " << setw(4) << setfill('0') << LPs[i].arrivalTime << endl
-	 << "Remaining Fly Time : " << LPs[i].remainingFlyingTime << endl << endl;
-	}
-	*/
-	/*Testing for distributed Queue*/
-	/*
-	cout << "===================================================" << endl;
-	cout << "          Test of Enqueue Distribution" << endl;
-	cout << "===================================================" << endl;
-	for (int i = 0; i < 4; i++)
-	{
-		if (!landingQ[i].IsEmpty())
-		{
-			cout << "[Landing Planes for Q" << i << "]" << endl;
-			ind = landingQ[i].Size();
-			for (int j = 0; j < ind; j++)
-			{
-				LandingPlane temp;
-				temp = landingQ[i].Pop();
-				cout << "Plane ID           : " << temp.IDofLandingPlane << endl
-					<< "Arrival Time       : " << setw(4) << setfill('0') << temp.arrivalTime << endl
-					<< "Remaining Fly Time : " << temp.remainingFlyingTime << endl << endl;
-			}
-		}
-	}
-	*/
-	
+
 	/*Selecting RUNWAYS*/
 	while (1)
 	{
@@ -142,7 +96,7 @@ int main()
 		takeoffEnqueue(planes, takeoffQ);
 		int landP = -1;
 		int flightP = -1;
-		
+
 		if (!isAllEmpty(landingQ))
 		{
 			while (1)
@@ -151,7 +105,7 @@ int main()
 				//cout << "Recieved Value is " << pivot << endl;
 				if (landP == -1001)
 					break;
-				if (landingProcedure(landingQ, landP, currentTime) == 0)
+				if (landingProcedure(landingQ, landP, currentTime, planes) == 0)
 					break;
 			}
 		}
@@ -168,15 +122,22 @@ int main()
 					break;
 			}
 		}
-
-		recordOfRunways(currentTime++);
-
+		
+		
+		for (int i = 0; i < nol; i++)
+		{
+			planes.remainingFlyTime[i] --;
+			if (planes.remainingFlyTime[i] < 6 && planes.remainingFlyTime[i] > 0)
+				nofuel++;
+		}
+		recordOfRunways(currentTime++, landingQ, takeoffQ);
+		nofuel = 0;
 		if (isAllEmpty(landingQ) && isAllEmpty(takeoffQ))
 			break;
 	}
 	while (currentTime <= R1End || currentTime <= R2End || currentTime <= R3End)
-		recordOfRunways(currentTime++);
-	recordOfRunways(currentTime);
+		recordOfRunways(currentTime++, landingQ, takeoffQ);
+	recordOfRunways(currentTime, landingQ, takeoffQ);
 	//recordOfRunways();
 	return 0;
 }
@@ -218,13 +179,13 @@ int generateInputData(struct randomInput* random)
 	random->remainingFlyTime = new int[random->numPlanesLanding];
 	LPs = new LandingPlane[random->numPlanesLanding];
 	TPs = new TakeoffPlane[random->numPlanesTakeOff];
-	
+
 	for (int i = 0; i < random->numPlanesLanding; i++)
 	{
 #ifdef DEBUG
 		LPs[i].arrivalTime = random->timeUnit;
 		LPs[i].IDofLandingPlane = i * 2 + 1;
-		LPs[i].remainingFlyingTime = rand()% 50 + 1;
+		LPs[i].remainingFlyingTime = rand() % 50 + 1;
 		random->remainingFlyTime[i] = LPs[i].remainingFlyingTime;
 #endif
 #ifndef DEBUG
@@ -239,20 +200,20 @@ int generateInputData(struct randomInput* random)
 
 	for (int i = 0; i < random->numPlanesTakeOff; i++)
 	{
-		TPs[i].takeoffTime = rand()%3 + 1;
+		TPs[i].takeoffTime = rand() % 3 + 1;
 		TPs[i].IDofTakeoffPlane = i * 2 + 2;
 	}
 	return random->numPlanesLanding + random->numPlanesTakeOff;
 }
 
-void landingEnqueue(randomInput &planes, Queue<LandingPlane> *landingQ)
+void landingEnqueue(randomInput& planes, Queue<LandingPlane>* landingQ)
 {
 	while (planes.numPlanesLanding > 0)
 	{
 		if (((landingQ[0].Size() == MAXWAITINGPLANES) && (landingQ[1].Size() == MAXWAITINGPLANES)
 			&& (landingQ[2].Size() == MAXWAITINGPLANES) && (landingQ[3].Size() == MAXWAITINGPLANES)))
 			break;
-		
+
 		int avg = (landingQ[0].Size() + landingQ[1].Size() + landingQ[2].Size() + landingQ[3].Size()) / 4;
 		int piv = rand() % 4;
 		while (landingQ[piv].Size() > avg || landingQ[piv].Size() > MAXWAITINGPLANES)
@@ -260,7 +221,6 @@ void landingEnqueue(randomInput &planes, Queue<LandingPlane> *landingQ)
 
 		landingQ[piv].Push(LPs[lnd]);
 		planes.numPlanesLanding--;
-		LPs[lnd].remainingFlyingTime--;
 		lnd++;
 	}
 }
@@ -285,7 +245,7 @@ void takeoffEnqueue(randomInput& planes, Queue<TakeoffPlane>* takeoffQ)
 }
 void showQueueStatus(Queue<LandingPlane>* landingQueue)
 {
-	cout <<endl<<"[Current Landing Queue Status]" << endl;
+	cout << endl << "[Current Landing Queue Status]" << endl;
 	for (int q = 0; q < 4; q++)
 	{
 		cout << "|QUEUE" << q << "|" << endl;
@@ -322,11 +282,11 @@ int findSmallLandingQueue(Queue<LandingPlane>* landingQueue)
 	int qno = -1;
 	for (int q = 0; q < 4; q++)
 	{
-		for (int i = 0; i < (landingQueue+q)->Size(); i++)
+		for (int i = 0; i < (landingQueue + q)->Size(); i++)
 		{
-			if (cmp > 0 && cmp > (landingQueue+q)->Find(i).arrivalTime + (landingQueue+q)->Find(i).remainingFlyingTime)
+			if (cmp > 0 && cmp > (landingQueue + q)->Find(i).arrivalTime + (landingQueue + q)->Find(i).remainingFlyingTime)
 			{
-				cmp = (landingQueue+q)->Find(i).arrivalTime + (landingQueue+q)->Find(i).remainingFlyingTime;
+				cmp = (landingQueue + q)->Find(i).arrivalTime + (landingQueue + q)->Find(i).remainingFlyingTime;
 				id = (landingQueue + q)->Find(i).IDofLandingPlane;
 				qno = q;
 			}
@@ -342,24 +302,24 @@ int findSmallTakeoffQueue(Queue<TakeoffPlane>* takeoffQueue)
 	int avg = (takeoffQueue[0].Size() + takeoffQueue[1].Size() + takeoffQueue[2].Size()) / 3;
 	while (takeoffQueue[piv].Size() < avg && takeoffQueue[piv].IsEmpty())
 		piv = rand() % 3;
-	
+
 	if (takeoffQueue[piv].IsEmpty())
 		return -1;
-	
+
 	return piv;
 }
 
-int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime)
+int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime, randomInput& planes)
 {
 	int ind = 0;
 	LandingPlane land;
 	land.IDofLandingPlane = pivot % 1000;
-	
+
 	land = landingQ[pivot / 1000].searchPop(land);
-	
+
 	if (index1 == -1 || currentTime > R1End)
 	{
-		if (currentTime  > land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
+		if (currentTime > land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
 			goto landFailure;
 		if (R1End < currentTime + LANDINGTIME)
 			R1End = currentTime + LANDINGTIME;
@@ -370,10 +330,10 @@ int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime)
 		R1[index1].end = currentTime + LANDINGTIME;
 		ind++;
 	}
-	
+
 	else if (index2 == -1 || currentTime > R2End)
 	{
-		if (currentTime> land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
+		if (currentTime > land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
 			goto landFailure;
 		if (R2End < currentTime + LANDINGTIME)
 			R2End = currentTime + LANDINGTIME;
@@ -381,11 +341,12 @@ int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime)
 		R2[index2].takeoff_landing = 1;
 		R2[index2].IDPlane = land.IDofLandingPlane;
 		R2[index2].start = currentTime;
-		R2[index2].end = currentTime  + LANDINGTIME;
+		R2[index2].end = currentTime + LANDINGTIME;
 		ind++;
 	}
-	
-	else if (land.remainingFlyingTime + land.arrivalTime- currentTime <= LANDINGTIME + 3 && currentTime > R3End)
+
+	else if (land.remainingFlyingTime - (currentTime - land.arrivalTime) <= 3 
+		&& currentTime > R3End)
 	{
 		if (currentTime > land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
 			goto landFailure;
@@ -398,16 +359,21 @@ int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime)
 		R3[index3].end = currentTime + LANDINGTIME;
 		ind++;
 	}
+
 landFailure:
 	if (ind == 0)
 	{
-		if (land.remainingFlyingTime + land.arrivalTime > currentTime)
+		if (land.remainingFlyingTime + land.arrivalTime  > currentTime + LANDINGTIME)
 			landingQ[pivot / 1000].Push(land);
 		else
 			crash++;
-		
+
 		return 0;
 	}
+	
+	landed += (double)(currentTime - land.arrivalTime + LANDINGTIME);
+	remTime += (double)(land.remainingFlyingTime - (currentTime - land.arrivalTime + LANDINGTIME));
+	planes.remainingFlyTime[(land.IDofLandingPlane - 1) / 2] = -1;
 	landcomplete++;
 	return 1;
 }
@@ -418,7 +384,7 @@ int takeOffProcedure(Queue<TakeoffPlane>* takeOff, int pivot, int currentTime)
 	TakeoffPlane flight;
 	flight = takeOff[pivot].Find(0);
 
-	if (index3 == -1 || R3End < currentTime || (R3[index3].end > flight.takeoffTime + currentTime 
+	if (index3 == -1 || R3End < currentTime || (R3[index3].end > flight.takeoffTime + currentTime
 		&& R3[index3].start < flight.takeoffTime + currentTime && R3[index3].takeoff_landing == 1))
 	{
 		flight = takeOff[pivot].Pop();
@@ -460,10 +426,10 @@ int takeOffProcedure(Queue<TakeoffPlane>* takeOff, int pivot, int currentTime)
 		ind++;
 	}
 
-
-	if (ind == 0)		
+	if (ind == 0)
 		return 0;
-	
+
+	tookoff += (double)(flight.takeoffTime);
 	flightcomplete++;
 	return 1;
 }
@@ -474,7 +440,7 @@ void recordOfRunways()
 	cout << "===================================================" << endl;
 	cout << "             FULL Record of 3 Runways" << endl;
 	cout << "===================================================" << endl;
-	cout << "Total " << landcomplete << " Planes landed, and "<< flightcomplete << " took off." << endl
+	cout << "Total " << landcomplete << " Planes landed, and " << flightcomplete << " took off." << endl
 		<< crash << " Plane(s) crashed." << endl;
 	/*For Runway 1*/
 	cout << endl << "[Runway #1]" << endl;
@@ -529,19 +495,48 @@ void recordOfRunways()
 	}
 }
 
-void recordOfRunways(int currentTime)
+void recordOfRunways(int currentTime, Queue<LandingPlane>* landingQ, Queue<TakeoffPlane>* takeoffQ)
 {
+	/*
+	1) °¢ queueÀÇ ³»¿ë, 2) Æò±Õ ÀÌ·ú ´ë±â ½Ã°£,
+	3) Æò±Õ Âø·ú ´ë±â ½Ã°£, 4) Âø·ú½Ã ÀÜ¿© Æò±Õ ºñÇà ½Ã°£, 5) no fuel »óÅÂÀÇ ºñÇà±â ´ñ¼ö
+	*/
+
 	/*OUTPUT OF RUNWAYS by TIME*/
-	static int landed = 0, tookoff = 0;
+
 	cout << "===================================================" << endl;
-	cout << "          Record of 3 Runways at " << setw(4) << setfill('0') << currentTime <<endl;
+	cout << "          Record of 3 Runways at " << setw(4) << setfill('0') << currentTime << endl;
 	cout << "===================================================" << endl;
-	cout << "Total " << landcomplete << " Plane landing Records , and " << flightcomplete << " taking off." << endl
-		<< crash << " Plane(s) crashed." << endl;
+	
+	//OUTPUT CONDITION 1//
+	showQueueStatus(landingQ);
+	showQueueStatus(takeoffQ);
+	cout << "---------------------------------------------------" << endl;
+	//OUTPUT CONDITION 2//
+	cout << "Average waiting time for take off     : ";
+	if (index1 + index2 + index3 == -3)
+		cout << "0" << endl;
+	else
+		cout << tookoff / flightcomplete << endl;
+	//OUTPUT CONDITION 3//
+	cout << "Average waiting time for landing      : ";
+	if (index1 + index2 + index3 == -3)
+		cout << "0" << endl;
+	else
+		cout << landed / landcomplete << endl;
+	//OUTPUT CONDITION 4//
+	cout << "Average remaining time after landing  : ";
+	if (index1 + index2 + index3 == -3)
+		cout << "0" << endl;
+	else
+		cout << remTime / landcomplete << endl;
+	//OUTPUT CONDITION 5//
+	cout << "Number of planes with no fuel status  : " << nofuel << endl;
+	cout << "---------------------------------------------------" << endl;
 
 	/*For Runway 1*/
 	cout << endl << "[Runway #1]" << endl;
-	if (R1[index1].start <= currentTime && R1[index1].end >= currentTime )
+	if (R1[index1].start <= currentTime && R1[index1].end >= currentTime)
 	{
 		cout << "Record No." << index1 + 1;
 		if (R1[index1].takeoff_landing == 0)	cout << "(TakeOff)";
