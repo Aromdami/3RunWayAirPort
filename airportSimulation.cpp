@@ -70,6 +70,8 @@ void showQueueStatus(Queue<LandingPlane>* landingQueue);
 void showQueueStatus(Queue<TakeoffPlane>* takeoffQueue);
 void recordOfRunways();
 void recordOfRunways(int currentTime, Queue<LandingPlane>* landingQ, Queue<TakeoffPlane>* takeoffQ);
+void selectRunways(int piv, Queue<TakeoffPlane>* takeoffQ, int currentTime);
+void selectRunways(int piv, Queue<LandingPlane>* landingQ, int currentTime, randomInput& planes);
 
 /*Global Variables (Planes, index of Runways)*/
 LandingPlane* LPs;
@@ -97,33 +99,9 @@ int main()
 		int landP = -1;
 		int flightP = -1;
 
-		if (!isAllEmpty(landingQ))
-		{
-			while (1)
-			{
-				landP = findSmallLandingQueue(landingQ);
-				//cout << "Recieved Value is " << pivot << endl;
-				if (landP == -1001)
-					break;
-				if (landingProcedure(landingQ, landP, currentTime, planes) == 0)
-					break;
-			}
-		}
+		selectRunways(landP, landingQ, currentTime, planes);
+		selectRunways(flightP, takeoffQ, currentTime);
 
-		if (!isAllEmpty(takeoffQ))
-		{
-			while (1)
-			{
-				//showQueueStatus(takeoffQ);
-				flightP = findSmallTakeoffQueue(takeoffQ);
-				if (flightP == -1)
-					break;
-				if (takeOffProcedure(takeoffQ, flightP, currentTime) == 0)
-					break;
-			}
-		}
-		
-		
 		for (int i = 0; i < nol; i++)
 		{
 			planes.remainingFlyTime[i] --;
@@ -345,7 +323,7 @@ int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime, 
 		ind++;
 	}
 
-	else if (land.remainingFlyingTime - (currentTime - land.arrivalTime) <= 3 
+	else if (land.remainingFlyingTime - (currentTime - land.arrivalTime) <= 3
 		&& currentTime > R3End)
 	{
 		if (currentTime > land.arrivalTime + land.remainingFlyingTime + LANDINGTIME)
@@ -363,14 +341,14 @@ int landingProcedure(Queue<LandingPlane>* landingQ, int pivot, int currentTime, 
 landFailure:
 	if (ind == 0)
 	{
-		if (land.remainingFlyingTime + land.arrivalTime  > currentTime + LANDINGTIME)
+		if (land.remainingFlyingTime + land.arrivalTime > currentTime + LANDINGTIME)
 			landingQ[pivot / 1000].Push(land);
 		else
 			crash++;
 
 		return 0;
 	}
-	
+
 	landed += (double)(currentTime - land.arrivalTime + LANDINGTIME);
 	remTime += (double)(land.remainingFlyingTime - (currentTime - land.arrivalTime + LANDINGTIME));
 	planes.remainingFlyTime[(land.IDofLandingPlane - 1) / 2] = -1;
@@ -432,6 +410,39 @@ int takeOffProcedure(Queue<TakeoffPlane>* takeOff, int pivot, int currentTime)
 	tookoff += (double)(flight.takeoffTime);
 	flightcomplete++;
 	return 1;
+}
+
+void selectRunways(int landP, Queue<LandingPlane>* landingQ, int currentTime, randomInput& planes)
+{
+	if (!isAllEmpty(landingQ))
+	{
+		while (1)
+		{
+			landP = findSmallLandingQueue(landingQ);
+			//cout << "Recieved Value is " << pivot << endl;
+			if (landP == -1001)
+				break;
+			if (landingProcedure(landingQ, landP, currentTime, planes) == 0)
+				break;
+		}
+	}
+}
+
+void selectRunways(int flightP, Queue<TakeoffPlane>* takeoffQ, int currentTime)
+{
+	if (!isAllEmpty(takeoffQ))
+	{
+		while (1)
+		{
+			//showQueueStatus(takeoffQ);
+			flightP = findSmallTakeoffQueue(takeoffQ);
+			if (flightP == -1)
+				break;
+			if (takeOffProcedure(takeoffQ, flightP, currentTime) == 0)
+				break;
+		}
+	}
+
 }
 
 void recordOfRunways()
@@ -507,7 +518,7 @@ void recordOfRunways(int currentTime, Queue<LandingPlane>* landingQ, Queue<Takeo
 	cout << "===================================================" << endl;
 	cout << "          Record of 3 Runways at " << setw(4) << setfill('0') << currentTime << endl;
 	cout << "===================================================" << endl;
-	
+
 	//OUTPUT CONDITION 1//
 	showQueueStatus(landingQ);
 	showQueueStatus(takeoffQ);

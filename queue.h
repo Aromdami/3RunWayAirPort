@@ -48,7 +48,7 @@ void Queue<T>::Push(const T& item)
 	}
 	else
 		this->b_array[++(this->top)] = item;
-	
+
 }
 
 
@@ -57,14 +57,12 @@ T& Queue<T>::Pop()
 {
 	T retValue;
 
-	if (this->IsEmpty()) cout << "Queue is empty, cannot delete" << endl;
+	if (this->IsEmpty()) throw "Queue is Empty. Can not delete more items.";
 	else
 	{
-		//cout << this->top << endl;
 		retValue = this->b_array[0];
 		memcpy(this->b_array, this->b_array + 1, sizeof(T) * (this->capacity - 1));
 		this->top--;
-		//cout << ">>>Pop Completed" << endl << "Now Queue's Top is " << this->top << endl;
 		return retValue;
 	}
 
@@ -83,8 +81,8 @@ T& Queue<T>::searchPop(const T& item)
 			break;
 		}
 	}
-	
-	memcpy(this->b_array + i, this->b_array + i + 1, sizeof(T) *(this->capacity - i));
+
+	memcpy(this->b_array + i, this->b_array + i + 1, sizeof(T) * (this->capacity - i));
 
 	this->top--;
 	return retValue;
