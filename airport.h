@@ -563,7 +563,7 @@ void Airport::showtimeslot(struct randomInput& planes, Queue<LandingPlane> * lan
 		selectRunways(landP, landingQ, currentTime, planes);
 		selectRunways(flightP, takeoffQ, currentTime);
 
-		for (int i = 0; i < nol; i++)
+		for (int i = landcomplete; i < nol; i++)
 		{
 			planes.remainingFlyTime[i] --;
 			if (planes.remainingFlyTime[i] < 6 && planes.remainingFlyTime[i] > 0)
