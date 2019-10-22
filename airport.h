@@ -255,14 +255,15 @@ landFailure:
 		if (land.remainingFlyingTime + land.arrivalTime > currentTime + LANDINGTIME)
 			landingQ[pivot / 1000].Push(land);
 		else
+
 			crash++;
+
 
 		return 0;
 	}
 
-	landed += (double)(currentTime - land.arrivalTime + LANDINGTIME);
-	remTime += (double)(land.remainingFlyingTime - landed);
-	planes.remainingFlyTime[(land.IDofLandingPlane - 1) / 2] = -1;
+	landed += (double)(currentTime - land.arrivalTime);
+	remTime += (double)(land.remainingFlyingTime);
 	landcomplete++;
 	return 1;
 }
